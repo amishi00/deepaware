@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenArm · Data Collection</title>
+<style>
+  :root {
+    --bg: #0c0e12;
+    --panel: #14171d;
+    --panel-2: #1a1e26;
+    --line: #262b34;
+    --ink: #e6e9ef;
+    --ink-dim: #8b93a3;
+    --ink-faint: #565e6d;
+    --accent: #4de3c1;      /* signal teal — telemetry alive */
+    --accent-dim: #1f6b5c;
+    --hot: #ff5b5b;         /* recording */
+    --amber: #f5b942;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
+    --sans: "Inter", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-bottom: 14px; margin-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: baseline; gap: 14px; }
+  .brand h1 {
+    font-family: var(--mono); font-size: 15px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .brand .sub {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-faint);
+    letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .status-pill {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 5px 11px; border-radius: 2px;
+    border: 1px solid var(--line); color: var(--ink-dim);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); }
+  .dot.live { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 1.6s infinite; }
+  .dot.rec  { background: var(--hot); box-shadow: 0 0 8px var(--hot); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 4px; overflow: hidden;
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+  }
+  .panel-head h2 {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim);
+  }
+  .panel-head .meta { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+
+  /* arms */
+  .arms { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 640px) { .arms { grid-template-columns: 1fr; } }
+  .joint-row {
+    display: grid; grid-template-columns: 34px 1fr 1fr 1fr; gap: 8px;
+    align-items: center; padding: 7px 14px; border-bottom: 1px solid var(--panel-2);
+    font-family: var(--mono); font-size: 12px;
+  }
+  .joint-row:last-child { border-bottom: none; }
+  .joint-row .jid { color: var(--ink-faint); }
+  .col { display: flex; flex-direction: column; gap: 3px; }
+  .col .k { font-size: 9px; letter-spacing: 0.08em; color: var(--ink-faint); text-transform: uppercase; }
+  .col .v { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .bar { height: 3px; background: var(--panel-2); border-radius: 2px; overflow: hidden; margin-top: 2px; }
+  .bar span { display: block; height: 100%; background: var(--accent-dim); }
+  .head-labels {
+    display: grid; grid-template-columns: 34px 1fr 1fr 1fr; gap: 8px;
+    padding: 6px 14px; border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-faint);
+  }
+
+  /* cameras */
+  .cams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px; }
+  .cam { border: 1px solid var(--line); border-radius: 3px; overflow: hidden; background: #000; }
+  .cam .cam-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-dim);
+    padding: 6px 8px; background: var(--panel-2); border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between;
+  }
+  .cam img { width: 100%; display: block; image-rendering: pixelated; aspect-ratio: 4/3; object-fit: fill; background: #000; }
+  .cam.wide img { aspect-ratio: 8/3; }
+
+  /* control */
+  .control { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+  .stat-line { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px; }
+  .stat-line .k { color: var(--ink-faint); letter-spacing: 0.06em; }
+  .stat-line .v { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .rec-btn {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 15px; border: 1px solid var(--accent-dim); border-radius: 3px;
+    background: transparent; color: var(--accent); cursor: pointer;
+    transition: all 0.15s; width: 100%;
+  }
+  .rec-btn:hover { background: var(--accent-dim); color: var(--ink); }
+  .rec-btn.recording { border-color: var(--hot); color: var(--hot); }
+  .rec-btn.recording:hover { background: var(--hot); color: #fff; }
+  .rec-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .eps { padding: 0; max-height: 320px; overflow-y: auto; }
+  .ep {
+    padding: 10px 14px; border-bottom: 1px solid var(--panel-2);
+    font-family: var(--mono); font-size: 11px;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .ep:last-child { border-bottom: none; }
+  .ep .id { color: var(--ink); }
+  .ep .det { color: var(--ink-faint); font-size: 10px; }
+  .ep a { color: var(--accent); text-decoration: none; border: 1px solid var(--accent-dim); padding: 3px 8px; border-radius: 2px; font-size: 10px; }
+  .ep a:hover { background: var(--accent-dim); color: var(--ink); }
+  .empty { padding: 24px 14px; text-align: center; color: var(--ink-faint); font-family: var(--mono); font-size: 11px; }
+
+  .banner {
+    font-family: var(--mono); font-size: 11px; color: var(--amber);
+    background: rgba(245,185,66,0.08); border: 1px solid rgba(245,185,66,0.25);
+    border-radius: 3px; padding: 8px 12px; margin-bottom: 16px; display: none;
+  }
+  .banner.show { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>OpenArm</h1>
+      <span class="sub">Teleoperation Capture</span>
+    </div>
+    <div class="status-pill" id="statusPill">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">connecting</span>
+    </div>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="grid">
+    <div class="main">
+      <div class="arms">
+        <div class="panel">
+          <div class="panel-head"><h2>Left arm · can0</h2><span class="meta" id="leftMeta">—</span></div>
+          <div class="head-labels"><span>J</span><span>Pos rad</span><span>Vel rad/s</span><span>Torque Nm</span></div>
+          <div id="leftJoints"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Right arm · can1</h2><span class="meta" id="rightMeta">—</span></div>
+          <div class="head-labels"><span>J</span><span>Pos rad</span><span>Vel rad/s</span><span>Torque Nm</span></div>
+          <div id="rightJoints"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Camera preview</h2><span class="meta">4 sensors · async</span></div>
+        <div class="cams">
+          <div class="cam"><div class="cam-label"><span>wrist_left</span><span>60fps</span></div><img id="cam_wrist_left" alt="wrist left"></div>
+          <div class="cam"><div class="cam-label"><span>wrist_right</span><span>60fps</span></div><img id="cam_wrist_right" alt="wrist right"></div>
+          <div class="cam"><div class="cam-label"><span>ceiling</span><span>30fps</span></div><img id="cam_ceiling" alt="ceiling"></div>
+          <div class="cam wide"><div class="cam-label"><span>zed_stereo</span><span>15fps</span></div><img id="cam_zed_stereo" alt="zed stereo"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-head"><h2>Recording</h2></div>
+        <div class="control">
+          <div class="stat-line"><span class="k">State</span><span class="v" id="recState">idle</span></div>
+          <div class="stat-line"><span class="k">Episode</span><span class="v" id="recId">—</span></div>
+          <div class="stat-line"><span class="k">Elapsed</span><span class="v" id="recElapsed">0.0s</span></div>
+          <button class="rec-btn" id="recBtn" onclick="toggleRecord()">Start recording</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Episodes</h2><span class="meta" id="epCount">0</span></div>
+        <div class="eps" id="epList"><div class="empty">No episodes yet</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let recording = false, recStart = null;
+
+function fmt(n, d=3){ return (n>=0?"+":"") + n.toFixed(d); }
+
+function renderJoints(el, arm) {
+  if (!arm || !arm.joints || arm.joints.length === 0) {
+    el.innerHTML = '<div class="empty">no CAN frames — is vcan up?</div>';
+    return;
+  }
+  el.innerHTML = arm.joints.map(j => {
+    const pPct = Math.min(100, Math.abs(j.position)/3.14*100);
+    return `<div class="joint-row">
+      <span class="jid">${j.index}</span>
+      <div class="col"><span class="v">${fmt(j.position)}</span><div class="bar"><span style="width:${pPct}%"></span></div></div>
+      <div class="col"><span class="v">${fmt(j.velocity,2)}</span></div>
+      <div class="col"><span class="v">${fmt(j.torque,2)}</span></div>
+    </div>`;
+  }).join('');
+}
+
+async function pollLive() {
+  try {
+    const r = await fetch('/api/live');
+    const d = await r.json();
+    if (d.error) {
+      $('banner').textContent = 'CAN bus: ' + d.error + ' — camera preview still works. Bring up vcan0/vcan1 to see joint telemetry.';
+      $('banner').classList.add('show');
+      $('statusDot').className = 'dot';
+      $('statusText').textContent = 'cameras only';
+    } else {
+      $('banner').classList.remove('show');
+      $('statusDot').className = recording ? 'dot rec' : 'dot live';
+      $('statusText').textContent = recording ? 'recording' : 'live';
+      renderJoints($('leftJoints'), d.left);
+      renderJoints($('rightJoints'), d.right);
+      if (d.left) $('leftMeta').textContent = 'rx ' + d.left.frames_received + ' · drop ' + d.left.frames_dropped;
+      if (d.right) $('rightMeta').textContent = 'rx ' + d.right.frames_received + ' · drop ' + d.right.frames_dropped;
+    }
+  } catch(e) {
+    $('statusDot').className = 'dot';
+    $('statusText').textContent = 'offline';
+  }
+}
+
+function refreshCameras() {
+  const t = Date.now();
+  ['wrist_left','wrist_right','ceiling','zed_stereo'].forEach(c => {
+    const img = $('cam_'+c);
+    if (img) img.src = '/api/live/frame/' + c + '?t=' + t;
+  });
+}
+
+async function loadEpisodes() {
+  try {
+    const r = await fetch('/api/episodes');
+    const d = await r.json();
+    $('epCount').textContent = d.count;
+    if (d.count === 0) { $('epList').innerHTML = '<div class="empty">No episodes yet</div>'; return; }
+    $('epList').innerHTML = d.episodes.map(e => `
+      <div class="ep">
+        <div>
+          <div class="id">${e.episode_id.slice(0,15)}</div>
+          <div class="det">${e.num_ticks} ticks · ${e.duration_s.toFixed(1)}s · ${(e.size_bytes/1024).toFixed(0)}KB</div>
+        </div>
+        <a href="/api/episodes/${e.episode_id}/download">get</a>
+      </div>`).join('');
+  } catch(e){}
+}
+
+async function toggleRecord() {
+  const btn = $('recBtn'); btn.disabled = true;
+  try {
+    if (!recording) {
+      const r = await fetch('/api/record/start', {method:'POST'});
+      const d = await r.json();
+      recording = true; recStart = Date.now();
+      $('recState').textContent = 'recording'; $('recId').textContent = d.episode_id.slice(0,15);
+      btn.textContent = 'Stop recording'; btn.classList.add('recording');
+    } else {
+      await fetch('/api/record/stop', {method:'POST'});
+      recording = false; recStart = null;
+      $('recState').textContent = 'idle'; $('recId').textContent = '—'; $('recElapsed').textContent = '0.0s';
+      btn.textContent = 'Start recording'; btn.classList.remove('recording');
+      loadEpisodes();
+    }
+  } catch(e){}
+  btn.disabled = false;
+}
+
+setInterval(pollLive, 200);
+setInterval(refreshCameras, 200);
+setInterval(loadEpisodes, 3000);
+setInterval(() => { if (recording && recStart) $('recElapsed').textContent = ((Date.now()-recStart)/1000).toFixed(1) + 's'; }, 100);
+pollLive(); refreshCameras(); loadEpisodes();
+</script>
+</body>
+</html>

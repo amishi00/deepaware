@@ -1,0 +1,20 @@
+[project]
+name = "openarm-pipeline"
+version = "1.0.0"
+description = "Data collection pipeline for the OpenArm 2.0 robotic arm"
+requires-python = ">=3.10"
+dependencies = [
+    "python-can>=4.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "h5py>=3.8",
+    "numpy>=1.24",
+    "pillow>=10.0",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
